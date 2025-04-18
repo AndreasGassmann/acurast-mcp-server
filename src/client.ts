@@ -14,6 +14,7 @@ import {
   ListResourcesResultSchema,
   LoggingMessageNotificationSchema,
   ResourceListChangedNotificationSchema,
+  ReadResourceResultSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 // Create readline interface for user input
@@ -56,20 +57,24 @@ function printHelp(): void {
   console.log(
     "  call-tool <name> [args]    - Call a tool with optional JSON arguments"
   );
-  console.log("  greet [name]               - Call the greet tool");
-  console.log(
-    "  multi-greet [name]         - Call the multi-greet tool with notifications"
-  );
-  console.log(
-    "  start-notifications [interval] [count] - Start periodic notifications"
-  );
   console.log("  list-prompts               - List available prompts");
   console.log(
     "  get-prompt [name] [args]   - Get a prompt with optional JSON arguments"
   );
   console.log("  list-resources             - List available resources");
+  console.log("  read-resource <uri>        - Read a specific resource");
   console.log("  help                       - Show this help");
   console.log("  quit                       - Exit the program");
+  console.log("  greet [name]               - Call the greet tool");
+  console.log("\nExamples:");
+  console.log(`  call-tool deployScript {"script":"ipfs://asdf"}`);
+  console.log(
+    `  get-prompt review-manager-processors {"managerAddress":"5efowd"}`
+  );
+  console.log(`  read-resource https://acurast.com/api/v1/processors`);
+  console.log(
+    `  read-resource https://acurast.com/api/v1/processors/123/detail`
+  );
 }
 
 function commandLoop(): void {
@@ -116,21 +121,6 @@ function commandLoop(): void {
           }
           break;
 
-        case "greet":
-          await callGreetTool(args[1] || "MCP User");
-          break;
-
-        case "multi-greet":
-          await callMultiGreetTool(args[1] || "MCP User");
-          break;
-
-        case "start-notifications": {
-          const interval = args[1] ? parseInt(args[1], 10) : 2000;
-          const count = args[2] ? parseInt(args[2], 10) : 10;
-          await startNotifications(interval, count);
-          break;
-        }
-
         case "list-prompts":
           await listPrompts();
           break;
@@ -154,6 +144,15 @@ function commandLoop(): void {
 
         case "list-resources":
           await listResources();
+          break;
+
+        case "read-resource":
+          if (args.length < 2) {
+            console.log("Usage: read-resource <uri>");
+          } else {
+            const uri = args[1];
+            await readResource(uri);
+          }
           break;
 
         case "help":
@@ -383,27 +382,6 @@ async function callTool(
   }
 }
 
-async function callGreetTool(name: string): Promise<void> {
-  await callTool("greet", { name });
-}
-
-async function callMultiGreetTool(name: string): Promise<void> {
-  console.log("Calling multi-greet tool with notifications...");
-  await callTool("multi-greet", { name });
-}
-
-async function startNotifications(
-  interval: number,
-  count: number
-): Promise<void> {
-  console.log(
-    `Starting notification stream: interval=${interval}ms, count=${
-      count || "unlimited"
-    }`
-  );
-  await callTool("start-notification-stream", { interval, count });
-}
-
 async function listPrompts(): Promise<void> {
   if (!client) {
     console.log("Not connected to server.");
@@ -489,6 +467,34 @@ async function listResources(): Promise<void> {
     }
   } catch (error) {
     console.log(`Resources not supported by this server (${error})`);
+  }
+}
+
+async function readResource(uri: string): Promise<void> {
+  if (!client) {
+    console.log("Not connected to server.");
+    return;
+  }
+
+  try {
+    const resourceRequest = {
+      method: "resources/read",
+      params: {
+        uri: uri,
+      },
+    };
+
+    const resourceResult = await client.request(
+      resourceRequest,
+      ReadResourceResultSchema
+    );
+    console.log("Resource contents:");
+    resourceResult.contents.forEach((content) => {
+      console.log(`  URI: ${content.uri}`);
+      console.log(`  Text: ${content.text}`);
+    });
+  } catch (error) {
+    console.log(`Error reading resource: ${error}`);
   }
 }
 
