@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "npm run build &&node dist/index.js",
-    "dev": "tsc && node dist/index.js"
+    "start": "npm run build && node dist/server.js",
+    "start:client": "npm run build && node dist/client.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/inspector": "^0.10.2",
     "@modelcontextprotocol/sdk": "^1.10.1",
     "express": "^5.1.0",
     "zod": "^3.24.3"
